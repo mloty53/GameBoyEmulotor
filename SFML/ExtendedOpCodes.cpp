@@ -1,0 +1,173 @@
+#include "CPU.h"
+// BIT b, reg - bittest bitu b w rejestrze reg
+void CPU::test_bit(int bit, uint8_t reg){
+	int num = getBit(bit, reg);
+	if (num == 0) {
+		bitset(FLAG_Z);
+	}
+	else {
+		bitreset(FLAG_Z);
+	}
+	bitreset(FLAG_N);
+	bitset(FLAG_H);
+}
+// BIT b, (HL)	- bittest bitu b w lokacji (HL)
+void CPU::test_bitMEM(int bit, uint16_t reg){
+	uint8_t loc = Memory.readMemory(reg);
+	test_bit(bit, loc);
+	cycles += 8;
+}
+// SWAP B - zamiana starszej z mlodsza czescia  w rejestrze 8 bitowym
+void CPU::ext_swap(uint8_t& reg){
+	uint8_t before = reg;
+	uint8_t lower = (reg & 0x0F) << 4;
+	uint8_t higher = reg >> 4;
+	uint8_t res = lower | higher;
+	reg = res;
+	registerAF.lo = 0;
+	if (reg == 0) {
+		bitset(FLAG_Z);
+	}
+	cycles += 8;
+}
+// RLC (HL) - rotacja w lewo lokacji (HL) cyklicznie
+void CPU::ext_rlc(uint16_t pointer) {
+	uint8_t address = Memory.readMemory(pointer);
+	rlc_reg8(address);
+	Memory.writeMemory(pointer, address);
+	cycles += 8;
+}
+// RRC, (HL) - rotacja w prawo lokacji (HL) cyklicznie
+void CPU::ext_rrc(uint16_t pointer){
+	uint8_t address = Memory.readMemory(pointer);
+	rrc_reg8(address);
+	Memory.writeMemory(pointer, address);
+	cycles += 8;
+}
+// RL C - rotacja w lewo lokacji (HL)
+void CPU::ext_rl(uint16_t pointer){
+	uint8_t address = Memory.readMemory(pointer);
+	rl_reg8(address);
+	Memory.writeMemory(pointer, address);
+	cycles += 8;
+}
+// RR C - rotacja w prawo lokacji (HL)
+void CPU::ext_rr(uint16_t pointer){
+	uint8_t address = Memory.readMemory(pointer);
+	rr_reg8(address);
+	Memory.writeMemory(pointer, address);
+	cycles += 8;
+}
+// SLA - shift arytmetyczny w lewo
+void CPU::ext_sla(uint8_t& address){
+	int msb = address >> 7;
+	address <<= 1;
+	registerAF.lo = 0;
+	bitset(FLAG_C, msb);
+	bitreset(FLAG_N);
+	bitreset(FLAG_H);
+	if (address == 0) {
+		bitset(FLAG_Z);
+	}
+}
+// SRA - shift arytmetyczny w prawo
+void CPU::ext_sra(uint8_t& address){
+	int lsb = address & 0b1;
+	int msb = address >> 7;
+	address >>= 1;
+	if (msb) {
+		address = set_bit(address, 7);
+	}
+	registerAF.lo = 0;
+	bitset(FLAG_C, lsb);
+	bitreset(FLAG_N);
+	bitreset(FLAG_H);
+	if (address == 0) {
+		bitset(FLAG_Z);
+	}
+}
+// SRL - shift logiczny w lewo
+void CPU::ext_srl(uint8_t& address)
+{	// saved to store into carry
+	int lsbData = getBit(0, address);
+	address >>= 1;
+	address = reset_bit(address, 7);
+	registerAF.lo = 0;
+	if (address == 0) bitset(FLAG_Z);
+	if (lsbData != 0) bitset(FLAG_C);
+	bitreset(FLAG_N);
+	bitreset(FLAG_H);
+	cycles += 8;
+}
+// SRL (HL) - shift logiczny w lewo w lokacji (HL)
+void CPU::ext_SRLHL(uint16_t pointer) {
+	uint8_t loc = Memory.readMemory(pointer);
+	ext_srl(loc);
+	Memory.writeMemory(pointer, loc);
+	cycles += 8;
+}
+// SRA (HL) - shift arytmetyczny w prawo w lokacji (HL)
+void CPU::ext_SRAHL(uint16_t pointer) {
+	uint8_t loc = Memory.readMemory(pointer);
+	ext_sra(loc);
+	Memory.writeMemory(pointer, loc);
+	cycles += 8;
+}
+// SLA (HL) - shift arytmetyczny w lewo w lokacji (HL)
+void CPU::ext_SLAHL(uint16_t pointer) {
+	uint8_t loc = Memory.readMemory(pointer);
+	ext_sla(loc);
+	Memory.writeMemory(pointer, loc);
+	cycles += 8;
+}
+// RES BIT, REGISTER - reset bitu w rejestrze
+void CPU::ext_reset(int bit, uint8_t& address){
+	address = reset_bit(address, bit);
+	cycles += 8;
+}
+// RES BIT, (HL) - reset bitu w lokacji
+void CPU::ext_resetHL(int bit, uint16_t address){
+	uint8_t loc = Memory.readMemory(address);
+	ext_reset(bit, loc);
+	Memory.writeMemory(address, loc);
+	cycles += 8;
+}
+// SET BIT, REGISTER - usatwienie bitu w rejestrze
+void CPU::ext_set(int bit, uint8_t& address){
+	address = set_bit(address, bit);
+	cycles += 8;
+}
+// SET BIT, (HL) - usatwienie bitu w lokacji (HL)
+void CPU::ext_setHL(int bit, uint16_t address){
+	uint8_t loc = Memory.readMemory(address);
+	ext_set(bit, loc);
+	Memory.writeMemory(address, loc);
+	cycles += 8;
+}
+// BIT b, reg - bittest w rejstrze
+void CPU::ext_testBit(uint8_t reg, int bit){
+	uint8_t res = getBit(bit, reg);
+	if (res == 1) {
+		bitreset(FLAG_Z);
+	}
+	else {
+		bitset(FLAG_Z);
+	}
+	bitreset(FLAG_N);
+	bitset(FLAG_H);
+	cycles += 8;
+}
+//RES BIT, (HL) - reset bitu b w (HL)
+void CPU::ext_resetBitHL(int bit){
+	uint8_t data = Memory.readMemory(registerHL.reg);
+	data = reset_bit(data, bit);
+	Memory.writeMemory(registerHL.reg, data);
+	cycles += 8;
+}
+//SET BIT, (HL) - ustawienie bitu b w (HL)
+void CPU::ext_setBitHL(int bit){
+	uint8_t data = Memory.readMemory(registerHL.reg);
+	data = set_bit(data, bit);
+	Memory.writeMemory(registerHL.reg, data);
+	cycles += 8;
+}

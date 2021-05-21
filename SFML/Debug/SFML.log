@@ -1,0 +1,10 @@
+﻿  CPU.cpp
+  ExtendedOpCodes.cpp
+  GPU.cpp
+  JumpTable.cpp
+C:\Users\Dell\source\repos\SFML\SFML\JumpTable.cpp(78,46): warning C4244: "argument": konwersja z "uint16_t" do "uint8_t", możliwa utrata danych
+  OPCodes.cpp
+  Źródło.cpp
+  Generowanie kodu...
+C:\Users\Dell\source\repos\SFML\SFML\CPU.cpp(284): warning C4715: "CPU::getNewClockFreq”: niewszystkie ścieżki kodu zwracają wartość
+  SFML.vcxproj -> C:\Users\Dell\source\repos\SFML\Debug\SFML.exe
